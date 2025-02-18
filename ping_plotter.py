@@ -1,59 +1,50 @@
 import matplotlib.pyplot as plt
 import re
+import numpy as np
 
 def plot_ping_times(filename="ping_data.txt"):
-    """Reads ping data, plots times, marks failures, and saves the graph.
-
-    Args:
-        filename: The name of the text file containing the ping data.
-    """
-
     try:
         with open(filename, "r") as f:
             ping_times = []
-            failures = []  # List to store indices of failed pings
+            failures = []
             for i, line in enumerate(f):
                 match = re.search(r"time=(\d+)ms", line)
                 if match:
                     time = int(match.group(1))
                     ping_times.append(time)
-                elif "Request timed out" in line or "Destination host unreachable" in line or "General failure" in line: # Add more failure conditions as needed
-                    ping_times.append(None) # Append None for failed pings to handle plotting
-                    failures.append(i)
-                # You can add more conditions here based on your ping output format.
-                elif "TTL expired in transit" in line:
+                elif "Request timed out" in line or "Destination host unreachable" in line or "General failure" in line or "TTL expired in transit" in line or "No route to host" in line:
                     ping_times.append(None)
                     failures.append(i)
-                elif "No route to host" in line:
-                    ping_times.append(None)
-                    failures.append(i)
-
-
 
         if not ping_times:
             print("No ping times found in the file.")
             return
 
         plt.figure(figsize=(10, 6))
-        plt.plot(ping_times, marker='o', linestyle='-', label="Successful Pings")
 
-        # Mark failures in red – Make failures VERY prominent
-        if failures:
-            failure_times = [ping_times[i] if i < len(ping_times) else None for i in failures]
-            plt.scatter(failures, failure_times, color='red', marker='x', s=200, linewidths=3, label="Ping Failures")  # Increased marker size and linewidth
+        # Convert ping_times to a NumPy array for easier masking
+        ping_times_np = np.array(ping_times, dtype=float)  # Use float to handle None values
+
+        # Plot the successful pings (where there's a valid time)
+        valid_indices = ~np.isnan(ping_times_np)  # Indices where ping_times_np is NOT NaN
+        plt.plot(np.arange(len(ping_times))[valid_indices], ping_times_np[valid_indices], marker='o', linestyle='-', label="Successful Pings")
+
+        # Plot the failures as red 'x's on the line itself
+        for i in failures:
+            plt.plot(i, -10, marker='x', color='red', markersize=10, markeredgewidth=3)  # Plot 'x' below the graph
 
         plt.xlabel("Ping Number")
         plt.ylabel("Time (ms)")
         plt.title("Ping Times Over Time (with Failures)")
         plt.grid(True)
 
-        min_time = min(filter(lambda x: x is not None, ping_times)) if any(ping_times) else 0 # Handle cases where all pings fail
-        max_time = max(filter(lambda x: x is not None, ping_times)) if any(ping_times) else 100 # Default max time if all fail
+        min_time = np.nanmin(ping_times_np) if any(ping_times_np) else 0 # Use np.nanmin to ignore NaNs
+        max_time = np.nanmax(ping_times_np) if any(ping_times_np) else 100
         padding = (max_time - min_time) * 0.2
         plt.ylim(max(0, min_time - padding), max_time + padding)
 
         plt.tight_layout()
-        plt.legend()  # Show the legend
+        plt.legend()
         plt.savefig("ping_graph.png")
         print("Ping graph saved as ping_graph.png")
 
