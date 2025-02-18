@@ -37,10 +37,10 @@ def plot_ping_times(filename="ping_data.txt"):
         plt.figure(figsize=(10, 6))
         plt.plot(ping_times, marker='o', linestyle='-', label="Successful Pings")
 
-        # Mark failures in red
+        # Mark failures in red – Make failures VERY prominent
         if failures:
-          failure_times = [ping_times[i] if i < len(ping_times) else None for i in failures] # Get y-values for failures, handle potential index errors
-          plt.scatter(failures, failure_times, color='red', marker='x', s=100, label="Ping Failures") # Increased marker size for visibility
+            failure_times = [ping_times[i] if i < len(ping_times) else None for i in failures]
+            plt.scatter(failures, failure_times, color='red', marker='x', s=200, linewidths=3, label="Ping Failures")  # Increased marker size and linewidth
 
         plt.xlabel("Ping Number")
         plt.ylabel("Time (ms)")
